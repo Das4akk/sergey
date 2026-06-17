@@ -25,7 +25,66 @@ export default function App() {
     'eclipse': 'Первое затмение - Достигнуто Сумеречное измерение',
     'chronos': 'Осколки времени - Освоена Хроносфера',
     'echoes': 'Эхо былого - Накоплено 50 Эха Пустоты',
-    'supernova': 'Сверхновая - Постигнута Глубина Сингулярности'
+    'supernova': 'Сверхновая - Постигнута Глубина Сингулярности',
+    'first_blood': 'Первые шаги - Набрана 50 общей массы',
+    'apprentice': 'Ученик Пустоты - Достигнут 5 уровень',
+    'adept': 'Адепт Вечности - Достигнут 10 уровень',
+    'master': 'Магистр Гравитации - Достигнут 20 уровень',
+    'grandmaster': 'Грандмастер - Достигнут 30 уровень',
+    'god_of_gravity': 'Бог Гравитации - Достигнут 50 уровень',
+    'black_hole': 'Черная дыра - 10,000 общей массы',
+    'supermassive': 'Сверхмассивная - 1,000,000 общей массы',
+    'galactic_core': 'Галактическое ядро - 100,000,000 общей массы',
+    'singularity_novice': 'Горизонт - Сингулярность заряд 10',
+    'singularity_master': 'Притяжение - Сингулярность заряд 50',
+    'singularity_god': 'Коллапс - Сингулярность заряд 100',
+    'singularity_breaker': 'Разрыв Пространства - Сингулярность заряд 200',
+    'dimension_void': 'Слой первый - Погружение в Сумерки',
+    'dimension_twilight': 'Слой второй - Рассвет Вселенной',
+    'dimension_dawn': 'Слой третий - Эфирные потоки',
+    'dimension_ether': 'Слой четвёртый - Астральный холод',
+    'dimension_astral': 'Слой пятый - За пределами восприятия',
+    'stardust_collector': 'Собиратель пыли - 50 Звездной пыли',
+    'stardust_hoarder': 'Драгоценность космоса - 500 Звездной пыли',
+    'echo_whisperer': 'Шепот прошлого - 500 Эха Пустоты',
+    'rebirth': 'Перерождение - Первый престиж ядра',
+    'dark_matter_initiate': 'Теневая материя - Изучена Темная Материя',
+    'event_horizon_reached': 'Горизонт Событий - Изучено уничтожение',
+    'star_weaver_born': 'Ткач Звезд - Изучена конвертация',
+    'pulsar_unlocked': 'Пульсар - Открыты ударные волны',
+    'voidwalker_step': 'Шаг Пустоты - Открыто ускорение',
+    
+    // New 25 Achievements
+    'level_2': 'Первая искаженность - 2 уровень',
+    'level_15': 'Аспект гравитации - 15 уровень',
+    'level_40': 'Пожиратель систем - 40 уровень',
+    'level_75': 'Пространственная аномалия - 75 уровень',
+    'level_100': 'Космический Архитектор - 100 уровень',
+    
+    'mass_10': 'Крошечная пылинка - 10 общей массы',
+    'mass_500': 'Сгусток материи - 500 общей массы',
+    'mass_1b': 'Квазар - 1,000,000,000 общей массы',
+    
+    'echo_10k': 'Гармония эха - 10,000 Эха Пустоты',
+    'echo_1m': 'Слияние времен - 1,000,000 Эха Пустоты',
+    
+    'stardust_10k': 'Звёздная река - 10,000 Звездной пыли',
+    'stardust_1m': 'Галактическая туманность - 1,000,000 Звездной пыли',
+    
+    'prestige_5': 'Колесо Самсары - 5 Перерождений',
+    'prestige_10': 'Вечный двигатель - 10 Перерождений',
+    'prestige_25': 'Бесконечный цикл - 25 Перерождений',
+    
+    'gravity_50': 'Неотвратимость - Гравитация ур. 50',
+    'entropy_50': 'Хаос частиц - Энтропия ур. 50',
+    'multiplier_100': 'Математическая сингулярность - Суперпозиция ур. 100',
+    'orbitals_10': 'Солнечная система - Спутники ур. 10',
+    'fractal_10': 'Лента Мёбиуса - Фрактал ур. 10',
+    'pulsar_10': 'Ритм Пустоты - Пульсар ур. 10',
+    'voidwalker_25': 'Странник измерения - Шагун ур. 25',
+    'dark_matter_20': 'Бездна смотрит в тебя - Темная Материя ур. 20',
+    'stellar_forge_10': 'Творец миров - Звездная Кузня ур. 10',
+    'monolith_max': 'Идеальная симметрия - Монолит ур. 10'
   };
 
   const handleAchievement = useCallback((id: string) => {
@@ -111,6 +170,10 @@ export default function App() {
          engineRef.current.isRepulsing = true;
          setIsRepulsing(true);
          audio.playRepulse();
+         
+         if (engineRef.current.state.upgrades.pulsarBurst > 0 && Math.random() < engineRef.current.state.upgrades.pulsarBurst * 0.1) {
+            engineRef.current.triggerPulsarBurst();
+         }
       }
     } else {
       if (engineRef.current) engineRef.current.isPulling = true;
@@ -279,7 +342,10 @@ export default function App() {
             showShop={showShop}
             setShowShop={setShowShop}
             setThought={setThought}
-            onPrestige={() => engineRef.current?.prestige()}
+            onPrestige={() => {
+              audio.playPrestige();
+              engineRef.current?.prestige();
+            }}
             onBuyUpgrade={(key, cost) => engineRef.current?.buyUpgrade(key, cost)} 
           />
         </>

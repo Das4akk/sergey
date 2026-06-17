@@ -14,7 +14,7 @@ interface VoidHUDProps {
 }
 
 export function VoidHUD({ state, onBuyUpgrade, onPrestige, thought, showShop, setShowShop, setThought }: VoidHUDProps) {
-  const [tab, setTab] = useState<'matter' | 'echo'>('matter');
+  const [tab, setTab] = useState<'matter' | 'echo' | 'stardust'>('matter');
 
   const costs = {
     gravityPower: Math.floor(10 * Math.pow(1.5, state.upgrades.gravityPower - 1)),
@@ -28,14 +28,14 @@ export function VoidHUD({ state, onBuyUpgrade, onPrestige, thought, showShop, se
     chronosphere: Math.floor(2500 * Math.pow(3.0, state.upgrades.chronosphere)),
     quasar: Math.floor(5000 * Math.pow(4.0, state.upgrades.quasar)),
     
-    // New Matter upgrades
-    darkMatterSiphon: Math.floor(400 * Math.pow(2.2, state.upgrades.darkMatterSiphon)),
-    eventHorizon: Math.floor(1200 * Math.pow(2.8, state.upgrades.eventHorizon)),
-    nebulaCollector: Math.floor(1500 * Math.pow(2.5, state.upgrades.nebulaCollector)),
-    starWeaver: Math.floor(3000 * Math.pow(3.2, state.upgrades.starWeaver)),
-    cosmicResonance: Math.floor(10000 * Math.pow(3.0, state.upgrades.cosmicResonance)),
-    pulsarBurst: Math.floor(15000 * Math.pow(4.5, state.upgrades.pulsarBurst)),
-    voidwalker: Math.floor(25000 * Math.pow(5.0, state.upgrades.voidwalker)),
+    // Stardust costs (imbalanced)
+    darkMatterSiphon: Math.floor(50 * Math.pow(2.2, state.upgrades.darkMatterSiphon)),
+    eventHorizon: Math.floor(150 * Math.pow(2.8, state.upgrades.eventHorizon)),
+    nebulaCollector: Math.floor(300 * Math.pow(2.5, state.upgrades.nebulaCollector)),
+    starWeaver: Math.floor(800 * Math.pow(3.0, state.upgrades.starWeaver)),
+    cosmicResonance: Math.floor(1500 * Math.pow(3.2, state.upgrades.cosmicResonance)),
+    pulsarBurst: Math.floor(5000 * Math.pow(4.0, state.upgrades.pulsarBurst)),
+    voidwalker: Math.floor(10000 * Math.pow(5.0, state.upgrades.voidwalker)),
     
     // Echo costs (use echoes instead of mass)
     singularityDepth: Math.floor(1 + state.upgrades.singularityDepth * 1),
@@ -49,7 +49,7 @@ export function VoidHUD({ state, onBuyUpgrade, onPrestige, thought, showShop, se
     entropyWeaver: Math.floor(5 + state.upgrades.entropyWeaver * 2.5),
   };
 
-  const worlds = ["Полночь", "Сумерки", "Заря", "Эфир"];
+  const worlds = ["Пустота", "Сумерки", "Заря", "Эфир", "Астрал"];
   const currentWorldName = worlds[state.dimension % worlds.length];
 
   return (
@@ -146,37 +146,39 @@ export function VoidHUD({ state, onBuyUpgrade, onPrestige, thought, showShop, se
              <div className="flex gap-4 mb-8">
                 <button onClick={() => setTab('matter')} className={`px-6 py-2 rounded-full font-mono text-xs tracking-widest uppercase transition-colors border ${tab === 'matter' ? 'bg-white text-black border-white' : 'bg-transparent text-gray-400 border-gray-800 hover:border-gray-500'}`}>Материя</button>
                 <button onClick={() => setTab('echo')} className={`px-6 py-2 rounded-full font-mono text-xs tracking-widest uppercase transition-colors border ${tab === 'echo' ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/50' : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-500'}`}>Эхо (Престиж)</button>
+                <button onClick={() => setTab('stardust')} className={`px-6 py-2 rounded-full font-mono text-xs tracking-widest uppercase transition-colors border ${tab === 'stardust' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50' : 'bg-transparent text-gray-500 border-gray-800 hover:border-gray-500'}`}>Пробуждение</button>
              </div>
 
              <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
                 {tab === 'matter' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl">
-                    <ShopCard icon={<Target size={20}/>} title="Гравитация" desc="Радиус притяжения ядра" extendedDesc={`Увеличивает базовый радиус гравитационного поля ядра.\n\nДО: Частицы нужно подпускать почти вплотную, реагируя мгновенно.\nПОСЛЕ: Ядро затягивает фрагменты на огромном расстоянии, обеспечивая комфортный сбор.`} level={state.upgrades.gravityPower} cost={costs.gravityPower} canAfford={state.mass >= costs.gravityPower} onBuy={() => onBuyUpgrade('gravityPower', costs.gravityPower)} currency="M" />
-                    <ShopCard icon={<Sparkles size={20}/>} title="Энтропия" desc="Ускоряет генерацию пыли" extendedDesc={`Повышает скорость появления частиц в пустоте.\n\nДО: Вы медленно ждете появления каждой искры.\nПОСЛЕ: Горизонт событий кишит материей, готовой к поглощению.`} level={state.upgrades.spawnRate} cost={costs.spawnRate} canAfford={state.mass >= costs.spawnRate} onBuy={() => onBuyUpgrade('spawnRate', costs.spawnRate)} currency="M" />
-                    <ShopCard icon={<Network size={20}/>} title="Притяжение" desc="Пассивный сбор материи" extendedDesc={`Создает автономную тягу к ядру, избавляющую от необходимости зажимать мышь.\n\nДО: Полностью ручной контроль гравитации.\nПОСЛЕ: Энергия сама стекается к вам в пассивном режиме.`} level={state.upgrades.passivePull} cost={costs.passivePull} canAfford={state.mass >= costs.passivePull} onBuy={() => onBuyUpgrade('passivePull', costs.passivePull)} currency="M" />
-                    <ShopCard icon={<CircleDot size={20}/>} title="Суперпозиция" desc="Множитель получаемой массы" extendedDesc={`Каждая поглощенная частица приносит в разы больше массы.\n\nДО: Линейный и долгий прогресс.\nПОСЛЕ: Каждая пылинка ценится как настоящий астероид.`} level={state.upgrades.multiplier} cost={costs.multiplier} canAfford={state.mass >= costs.multiplier} onBuy={() => onBuyUpgrade('multiplier', costs.multiplier)} currency="M" />
-                    <ShopCard icon={<Orbit size={20}/>} title="Спутники" desc="Орбиты, поглощающие пыль" extendedDesc={`Формирует защитные кольца-спутники, которые собирают пыль автоматически.\n\nДО: Ядро — единственная зона абсорбции.\nПОСЛЕ: Надежный орбитальный щит сам разбирается с мелкими целями.`} level={state.upgrades.orbitals} cost={costs.orbitals} canAfford={state.mass >= costs.orbitals} onBuy={() => onBuyUpgrade('orbitals', costs.orbitals)} currency="M" />
-                    <ShopCard icon={<Link size={20}/>} title="Запутанность" desc="Шанс цепного поглощения" extendedDesc={`Поглощение одной частицы может вызвать схлопывание ближайших соседних.\n\nДО: Поглощение идет поштучно.\nПОСЛЕ: Массивные цепные реакции, очищающие целые сектора пространства.`} level={state.upgrades.entanglement} cost={costs.entanglement} canAfford={state.mass >= costs.entanglement} onBuy={() => onBuyUpgrade('entanglement', costs.entanglement)} currency="M" />
-                    <ShopCard icon={<Split size={20}/>} title="Фрактал" desc="Расщепление крупных частиц" extendedDesc={`Тяжелые астероиды при поглощении распадаются на рой мелких частиц.\n\nДО: Астероид дает фиксированную массу один раз.\nПОСЛЕ: Разрушение астероида питает вас дважды, создавая пылевое облако.`} level={state.upgrades.fractal} cost={costs.fractal} canAfford={state.mass >= costs.fractal} onBuy={() => onBuyUpgrade('fractal', costs.fractal)} currency="M" />
-                    <ShopCard icon={<Sun size={20}/>} title="Сияние" desc="Увеличивает плотность ядра" extendedDesc={`Скалярный множитель, значительно уплотняющий ядро на поздних этапах игры.\n\nДО: Вы упираетесь в лимит базового множителя.\nПОСЛЕ: Масса растет по экспоненте.`} level={state.upgrades.radiance} cost={costs.radiance} canAfford={state.mass >= costs.radiance} onBuy={() => onBuyUpgrade('radiance', costs.radiance)} currency="M" />
+                    <ShopCard icon={<Target size={20}/>} title="Гравитация" desc="Радиус притяжения ядра" extendedDesc={`Увеличивает базовый радиус гравитационного поля ядра.`} level={state.upgrades.gravityPower} cost={costs.gravityPower} canAfford={state.mass >= costs.gravityPower} onBuy={() => onBuyUpgrade('gravityPower', costs.gravityPower)} currency="M" />
+                    <ShopCard icon={<Sparkles size={20}/>} title="Энтропия" desc="Ускоряет генерацию пыли" extendedDesc={`Повышает скорость появления частиц в пустоте.`} level={state.upgrades.spawnRate} cost={costs.spawnRate} canAfford={state.mass >= costs.spawnRate} onBuy={() => onBuyUpgrade('spawnRate', costs.spawnRate)} currency="M" />
+                    <ShopCard icon={<Network size={20}/>} title="Притяжение" desc="Пассивный сбор материи" extendedDesc={`Автоматически притягивает частицы.`} level={state.upgrades.passivePull} cost={costs.passivePull} canAfford={state.mass >= costs.passivePull} onBuy={() => onBuyUpgrade('passivePull', costs.passivePull)} currency="M" />
+                    <ShopCard icon={<CircleDot size={20}/>} title="Суперпозиция" desc="Множитель получаемой массы" extendedDesc={`Каждая поглощенная частица приносит в разы больше массы.`} level={state.upgrades.multiplier} cost={costs.multiplier} canAfford={state.mass >= costs.multiplier} onBuy={() => onBuyUpgrade('multiplier', costs.multiplier)} currency="M" />
+                    <ShopCard icon={<Orbit size={20}/>} title="Спутники" desc="Орбиты, поглощающие пыль" extendedDesc={`Формирует защитные кольца-спутники, которые собирают пыль автоматически.`} level={state.upgrades.orbitals} cost={costs.orbitals} canAfford={state.mass >= costs.orbitals} onBuy={() => onBuyUpgrade('orbitals', costs.orbitals)} currency="M" />
+                    <ShopCard icon={<Link size={20}/>} title="Запутанность" desc="Шанс цепного поглощения" extendedDesc={`Поглощение одной частицы может вызвать схлопывание ближайших соседних.`} level={state.upgrades.entanglement} cost={costs.entanglement} canAfford={state.mass >= costs.entanglement} onBuy={() => onBuyUpgrade('entanglement', costs.entanglement)} currency="M" />
+                    <ShopCard icon={<Split size={20}/>} title="Фрактал" desc="Расщепление крупных частиц" extendedDesc={`Тяжелые астероиды при поглощении распадаются на рой мелких частиц.`} level={state.upgrades.fractal} cost={costs.fractal} canAfford={state.mass >= costs.fractal} onBuy={() => onBuyUpgrade('fractal', costs.fractal)} currency="M" />
+                    <ShopCard icon={<Sun size={20}/>} title="Сияние" desc="Увеличивает плотность ядра" extendedDesc={`Масса растет по экспоненте.`} level={state.upgrades.radiance} cost={costs.radiance} canAfford={state.mass >= costs.radiance} onBuy={() => onBuyUpgrade('radiance', costs.radiance)} currency="M" />
                     
                     {state.dimension >= 1 && (
                       <>
-                        <ShopCard variant="twilight" icon={<Hourglass size={20}/>} title="Хроносфера" desc="Замедляет время вблизи ядра" extendedDesc={`Снижает скорость полета объектов при их приближении к сингулярности.\n\nДО: Быстрые объекты срывают серию комбо.\nПОСЛЕ: Частицы вязнут в искривленном времени.`} level={state.upgrades.chronosphere} cost={costs.chronosphere} canAfford={state.mass >= costs.chronosphere} onBuy={() => onBuyUpgrade('chronosphere', costs.chronosphere)} currency="M" />
-                        <ShopCard variant="twilight" icon={<CircleDot size={20}/>} title="Темная Материя" desc="Скаляр от общей массы" extendedDesc={`Добавляет пассивный бонус к сбору в зависимости от вашей исторической общей массы.\n\nДО: Нет пассивного усиления от долгой игры.\nПОСЛЕ: Чем дольше вы играете, тем быстрее зарабатываете.`} level={state.upgrades.darkMatterSiphon} cost={costs.darkMatterSiphon} canAfford={state.mass >= costs.darkMatterSiphon} onBuy={() => onBuyUpgrade('darkMatterSiphon', costs.darkMatterSiphon)} currency="M" />
-                        <ShopCard variant="twilight" icon={<Target size={20}/>} title="Горизонт Событий" desc="Радиус уничтожения при Сверхновой" extendedDesc={`Увеличивает область поражения при взрыве (Сверхновой).\n\nДО: Пробел уничтожает кометы только поблизости.\nПОСЛЕ: Пробел очищает почти весь экран.`} level={state.upgrades.eventHorizon} cost={costs.eventHorizon} canAfford={state.mass >= costs.eventHorizon} onBuy={() => onBuyUpgrade('eventHorizon', costs.eventHorizon)} currency="M" />
-                        <ShopCard variant="twilight" icon={<Sparkles size={20}/>} title="Искатель Туманностей" desc="Увеличивает шанс Звездной Пыли" extendedDesc={`Повышает вероятность выпадения Звездной пыли из частиц.\n\nПыль используется для косметических эффектов.`} level={state.upgrades.nebulaCollector} cost={costs.nebulaCollector} canAfford={state.mass >= costs.nebulaCollector} onBuy={() => onBuyUpgrade('nebulaCollector', costs.nebulaCollector)} currency="M" />
+                        <ShopCard variant="twilight" icon={<Hourglass size={20}/>} title="Хроносфера" desc="Замедляет время вблизи ядра" extendedDesc={`Снижает скорость полета объектов.`} level={state.upgrades.chronosphere} cost={costs.chronosphere} canAfford={state.mass >= costs.chronosphere} onBuy={() => onBuyUpgrade('chronosphere', costs.chronosphere)} currency="M" />
+                        <ShopCard variant="twilight" icon={<Zap size={20}/>} title="Квазар" desc="Спонтанное поглощение искр" extendedDesc={`Автоматические вспышки собирают редкие частицы по всему экрану.`} level={state.upgrades.quasar} cost={costs.quasar} canAfford={state.mass >= costs.quasar} onBuy={() => onBuyUpgrade('quasar', costs.quasar)} currency="M" />
                       </>
                     )}
-                    {state.dimension >= 2 && (
-                      <>
-                        <ShopCard variant="dawn" icon={<Zap size={20}/>} title="Квазар" desc="Спонтанное поглощение искр" extendedDesc={`Периодически испускает световой луч, снайперски уничтожающий цель.\n\nДО: Полная визуальная зависимость от радиуса ядра.\nПОСЛЕ: Автоматические вспышки собирают редкие частицы по всему экрану.`} level={state.upgrades.quasar} cost={costs.quasar} canAfford={state.mass >= costs.quasar} onBuy={() => onBuyUpgrade('quasar', costs.quasar)} currency="M" />
-                        <ShopCard variant="dawn" icon={<Sun size={20}/>} title="Звездный Ткач" desc="Случайная конвертация в Пыль" extendedDesc={`Ядро периодически конвертирует малую частицу накопленной массы в Звездную пыль.`} level={state.upgrades.starWeaver} cost={costs.starWeaver} canAfford={state.mass >= costs.starWeaver} onBuy={() => onBuyUpgrade('starWeaver', costs.starWeaver)} currency="M" />
-                        <ShopCard variant="dawn" icon={<Network size={20}/>} title="Космический Резонанс" desc="Удержание комбо" extendedDesc={`Увеличивает время сохранения комбо-множителя.`} level={state.upgrades.cosmicResonance} cost={costs.cosmicResonance} canAfford={state.mass >= costs.cosmicResonance} onBuy={() => onBuyUpgrade('cosmicResonance', costs.cosmicResonance)} currency="M" />
-                        <ShopCard variant="dawn" icon={<Orbit size={20}/>} title="Выброс Пульсара" desc="Громкие вспышки притяжения" extendedDesc={`С определенной вероятностью притяжение (ПКМ) порождает ударную волну, затягивающую все на экране.`} level={state.upgrades.pulsarBurst} cost={costs.pulsarBurst} canAfford={state.mass >= costs.pulsarBurst} onBuy={() => onBuyUpgrade('pulsarBurst', costs.pulsarBurst)} currency="M" />
-                        <ShopCard variant="dawn" icon={<Split size={20}/>} title="Пустотный Шагун" desc="Пассивное ускорение частиц" extendedDesc={`Частицы двигаются быстрее к вашему ядру самостоятельно.`} level={state.upgrades.voidwalker} cost={costs.voidwalker} canAfford={state.mass >= costs.voidwalker} onBuy={() => onBuyUpgrade('voidwalker', costs.voidwalker)} currency="M" />
-                      </>
-                    )}
+                  </div>
+                )}
+
+                {tab === 'stardust' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl">
+                     <ShopCard variant="dawn" icon={<CircleDot size={20}/>} title="Темная Материя" desc="Скаляр от общей массы" extendedDesc={`Пассивный бонус к сбору в зависимости от вашей исторической общей массы.`} level={state.upgrades.darkMatterSiphon} cost={costs.darkMatterSiphon} canAfford={state.stardust >= costs.darkMatterSiphon} onBuy={() => onBuyUpgrade('darkMatterSiphon', costs.darkMatterSiphon)} currency="S" />
+                     <ShopCard variant="dawn" icon={<Target size={20}/>} title="Горизонт Событий" desc="Радиус уничтожения при Сверхновой" extendedDesc={`Увеличивает область поражения при взрыве.`} level={state.upgrades.eventHorizon} cost={costs.eventHorizon} canAfford={state.stardust >= costs.eventHorizon} onBuy={() => onBuyUpgrade('eventHorizon', costs.eventHorizon)} currency="S" />
+                     <ShopCard variant="dawn" icon={<Sparkles size={20}/>} title="Искатель Туманностей" desc="Увеличивает шанс Звездной Пыли" extendedDesc={`Повышает вероятность выпадения Звездной пыли.`} level={state.upgrades.nebulaCollector} cost={costs.nebulaCollector} canAfford={state.stardust >= costs.nebulaCollector} onBuy={() => onBuyUpgrade('nebulaCollector', costs.nebulaCollector)} currency="S" />
+                     <ShopCard variant="dawn" icon={<Sun size={20}/>} title="Звездный Ткач" desc="Случайная Пили" extendedDesc={`Ядро конвертирует огромные куски накопленной массы в Пыль.`} level={state.upgrades.starWeaver} cost={costs.starWeaver} canAfford={state.stardust >= costs.starWeaver} onBuy={() => onBuyUpgrade('starWeaver', costs.starWeaver)} currency="S" />
+                     <ShopCard variant="dawn" icon={<Network size={20}/>} title="Космический Резонанс" desc="Удержание энергии" extendedDesc={`Снижает затухание энергии Сингулярности.`} level={state.upgrades.cosmicResonance} cost={costs.cosmicResonance} canAfford={state.stardust >= costs.cosmicResonance} onBuy={() => onBuyUpgrade('cosmicResonance', costs.cosmicResonance)} currency="S" />
+                     <ShopCard variant="dawn" icon={<Orbit size={20}/>} title="Выброс Пульсара" desc="Громкие вспышки притяжения" extendedDesc={`ПКМ порождает ударную волну.`} level={state.upgrades.pulsarBurst} cost={costs.pulsarBurst} canAfford={state.stardust >= costs.pulsarBurst} onBuy={() => onBuyUpgrade('pulsarBurst', costs.pulsarBurst)} currency="S" />
+                     <ShopCard variant="dawn" icon={<Split size={20}/>} title="Пустотный Шагун" desc="Пассивное ускорение частиц" extendedDesc={`Частицы двигаются быстрее к вашему ядру самостоятельно.`} level={state.upgrades.voidwalker} cost={costs.voidwalker} canAfford={state.stardust >= costs.voidwalker} onBuy={() => onBuyUpgrade('voidwalker', costs.voidwalker)} currency="S" />
                   </div>
                 )}
 
@@ -186,31 +188,32 @@ export function VoidHUD({ state, onBuyUpgrade, onPrestige, thought, showShop, se
                        <div className="mb-4 md:mb-0 max-w-2xl">
                           <h3 className="font-sans text-xl tracking-tight text-indigo-100 font-medium mb-2">Перерождение (Престиж)</h3>
                           <p className="font-mono text-xs text-indigo-300/70 leading-relaxed mb-4">
-                             Пожертвовать всей собранной материей, уровнем и улучшениями физики, чтобы высвободить Эхо Пустоты. 
-                             Вы получите Эхо пропорционально максимальному достигнутому уровню и общей накопленной массе. 
-                             Аномальные способности сохраняются.
+                             Пожертвовать всей собранной материей, чтобы высвободить Эхо Пустоты. 
                           </p>
                           <div className="font-mono text-xs p-3 bg-indigo-950/40 border border-indigo-500/20 rounded-lg inline-block">
                             <span className="text-gray-400">Требования: </span>
-                            <span className={state.level >= 10 ? "text-green-400" : "text-red-400"}>
-                               {state.level >= 10 ? "✔ Достигнут уровень 10+" : "✘ Требуется минимум 10 уровень"}
-                            </span>
+                            {(() => {
+                               const reqLevel = 5 + (state.prestigeCount || 0) * 10;
+                               return (
+                                  <span className={state.level >= reqLevel ? "text-green-400" : "text-red-400"}>
+                                     {state.level >= reqLevel ? `✔ Достигнут уровень ${reqLevel}+` : `✘ Требуется минимум ${reqLevel} уровень (Текущий: ${state.level})`}
+                                  </span>
+                               );
+                            })()}
                             <br/>
                             <span className="text-gray-400 mt-1 block">Ожидаемое Эхо Пустоты: <span className="text-indigo-300 font-bold">+{Math.floor(Math.max(0, Math.floor(state.level * 1.5) + Math.floor(state.totalMass / 10000)) * (1 + state.upgrades.entropyWeaver * 0.1))}</span></span>
                           </div>
                        </div>
                        <button 
                          onClick={() => {
-                            if (state.level < 10) {
-                               alert("Вы недостаточно развили ядро. Требуется минимум 10 уровень.");
-                               return;
+                            const reqLevel = 5 + (state.prestigeCount || 0) * 10;
+                            if (state.level < reqLevel) {
+                               return; 
                             }
-                            if (window.confirm("Вы уверены, что хотите переродиться? Ваша масса и уровни будут сброшены.")) {
-                               onPrestige();
-                               setShowShop(false);
-                            }
+                            onPrestige();
+                            setShowShop(false);
                          }}
-                         className={`px-8 py-3 rounded-full transition-all font-mono text-xs uppercase tracking-widest shrink-0 ${state.level >= 10 ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/50 hover:bg-indigo-500 hover:text-white cursor-pointer' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                         className={`px-8 py-3 rounded-full transition-all font-mono text-xs uppercase tracking-widest shrink-0 ${state.level >= (5 + (state.prestigeCount || 0) * 10) ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/50 hover:bg-indigo-500 hover:text-white cursor-pointer' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
                        >
                          Переродиться
                        </button>
@@ -222,9 +225,8 @@ export function VoidHUD({ state, onBuyUpgrade, onPrestige, thought, showShop, se
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       <ShopCard variant="echo" icon={<ShieldAlert size={20}/>} title="Глубина" desc="Сохраняет 10% массы при Сверхновой" extendedDesc={`Меняет разрушительную природу Сверхновой.\n\nДО: Сверхновая (Пробел) спасает от комет, но обнуляет массу.\nПОСЛЕ: Сверхновая позволяет сохранить часть массы, делая её тактическим инструментом.`} level={state.upgrades.singularityDepth} cost={costs.singularityDepth} canAfford={state.echoes >= costs.singularityDepth} onBuy={() => onBuyUpgrade('singularityDepth', costs.singularityDepth)} currency="E" />
                       <ShopCard variant="echo" icon={<Anvil size={20}/>} title="Звездная Кузня" desc="Улучшает качество спавна" extendedDesc={`Реструктурирует случайность появления объектов.\n\nДО: Космос генерирует базовую пыль с редкими вкраплениями тяжелых элементов.\nПОСЛЕ: Вы находите крупные астероиды и редкие ядра материи значительно чаще.`} level={state.upgrades.stellarForge} cost={costs.stellarForge} canAfford={state.echoes >= costs.stellarForge} onBuy={() => onBuyUpgrade('stellarForge', costs.stellarForge)} currency="E" />
-                      <ShopCard variant="echo" icon={<Gem size={20}/>} title="Монолит" desc="Увеличивает макс. комбо" extendedDesc={`Формирует кристаллический фокус для удержания концентрации ядра.\n\nДО: Лимит счетчика множителя массы ограничен (10x).\nПОСЛЕ: Энергия аккумулируется намного дольше, награждая безупречный стиль игры огромным приростом.`} level={state.upgrades.voidMonolith} cost={costs.voidMonolith} canAfford={state.echoes >= costs.voidMonolith} onBuy={() => onBuyUpgrade('voidMonolith', costs.voidMonolith)} currency="E" />
-                      <ShopCard variant="echo" icon={<Infinity size={20}/>} title="Пуповина" desc="Замедляет угасание комбо" extendedDesc={`Укрепляет ткань реальности, связывающую поглощаемые объекты.\n\nДО: Малейшая ошибка или пауза мгновенно обрывает серию комбо.\nПОСЛЕ: Ткань прощает ошибки, давая больше времени на реакцию до потери множителя.`} level={state.upgrades.tachyonWeb} cost={costs.tachyonWeb} canAfford={state.echoes >= costs.tachyonWeb} onBuy={() => onBuyUpgrade('tachyonWeb', costs.tachyonWeb)} currency="E" />
-                      <ShopCard variant="echo" icon={<Orbit size={20}/>} title="Астральная Проекция" desc="Сохраняет комбо-множитель" extendedDesc={`Снижает потерю комбо при срыве.\n\nДО: Комбо обнуляется мгновенно.\nПОСЛЕ: Часть множителя сохраняется после срыва.`} level={state.upgrades.astralProjection} cost={costs.astralProjection} canAfford={state.echoes >= costs.astralProjection} onBuy={() => onBuyUpgrade('astralProjection', costs.astralProjection)} currency="E" />
+                      <ShopCard variant="echo" icon={<Gem size={20}/>} title="Расширение Сингулярности" desc="Увеличивает макс. заряд Сингулярности" extendedDesc={`Позволяет накапливать больше заряда, захватывая больше частиц.`} level={state.upgrades.voidMonolith} cost={costs.voidMonolith} canAfford={state.echoes >= costs.voidMonolith} onBuy={() => onBuyUpgrade('voidMonolith', costs.voidMonolith)} currency="E" />
+                      <ShopCard variant="echo" icon={<Infinity size={20}/>} title="Множитель Сингулярности" desc="Усиливает множитель при коллапсе" extendedDesc={`Увеличивает множитель, выдаваемый за захваченные орбиты.`} level={state.upgrades.tachyonWeb} cost={costs.tachyonWeb} canAfford={state.echoes >= costs.tachyonWeb} onBuy={() => onBuyUpgrade('tachyonWeb', costs.tachyonWeb)} currency="E" />
                       <ShopCard variant="echo" icon={<Network size={20}/>} title="Туннелирование" desc="Шанс Х2 без орбит" extendedDesc={`Частицы могут проходить сквозь ваши орбиты напрямую в ядро с двойным множителем.`} level={state.upgrades.quantunTunnelling} cost={costs.quantunTunnelling} canAfford={state.echoes >= costs.quantunTunnelling} onBuy={() => onBuyUpgrade('quantunTunnelling', costs.quantunTunnelling)} currency="E" />
                       <ShopCard variant="echo" icon={<Sun size={20}/>} title="Ткач Энтропии" desc="Буст к зарабатыванию Эха" extendedDesc={`Глобальный множитель зарабатываемого Эха при следующем престиже.`} level={state.upgrades.entropyWeaver} cost={costs.entropyWeaver} canAfford={state.echoes >= costs.entropyWeaver} onBuy={() => onBuyUpgrade('entropyWeaver', costs.entropyWeaver)} currency="E" />
                     </div>
