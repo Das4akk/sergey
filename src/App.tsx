@@ -1,0 +1,289 @@
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { GameEngine, GameState } from './lib/GameEngine';
+import { audio } from './lib/AudioEngine';
+import { VoidHUD } from './components/VoidHUD';
+import { AnimatePresence, motion } from 'motion/react';
+
+export default function App() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<GameEngine | null>(null);
+  
+  const [gameState, setGameState] = useState<GameState>({
+    level: 1, mass: 0, totalMass: 0, maxMass: 50, dimension: 0, echoes: 0, stardust: 0, achievements: [],
+    upgrades: { gravityPower: 1, spawnRate: 1, passivePull: 0, multiplier: 1, orbitals: 0, entanglement: 0, fractal: 0, radiance: 0, chronosphere: 0, quasar: 0, singularityDepth: 0, stellarForge: 0, voidMonolith: 0, tachyonWeb: 0, darkMatterSiphon: 0, eventHorizon: 0, nebulaCollector: 0, starWeaver: 0, cosmicResonance: 0, pulsarBurst: 0, voidwalker: 0, astralProjection: 0, quantunTunnelling: 0, entropyWeaver: 0 }
+  });
+  
+  const [thought, setThought] = useState<string | null>("Прими сингулярность.\nЛевая кнопка — поглощение.\nПравая кнопка — отталкивание.\nКлик — жатва.");
+  const [started, setStarted] = useState(false);
+  const [showShop, setShowShop] = useState(false);
+  const [isRepulsing, setIsRepulsing] = useState(false);
+
+  const [recentAchievement, setRecentAchievement] = useState<{id: string, name: string} | null>(null);
+
+  const achievementNames: Record<string, string> = {
+    'singularity': 'Сингулярность - Поглощено 1000 массы разом',
+    'eclipse': 'Первое затмение - Достигнуто Сумеречное измерение',
+    'chronos': 'Осколки времени - Освоена Хроносфера',
+    'echoes': 'Эхо былого - Накоплено 50 Эха Пустоты',
+    'supernova': 'Сверхновая - Постигнута Глубина Сингулярности'
+  };
+
+  const handleAchievement = useCallback((id: string) => {
+    audio.playAchievement();
+    setRecentAchievement({id, name: achievementNames[id] || id});
+    setTimeout(() => setRecentAchievement(null), 5000);
+  }, []);
+
+  const fetchVoidThought = useCallback(async (level: number, mass: number) => {
+    try {
+       const res = await fetch('/api/void-thought', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ level, mass })
+       });
+       if (res.ok) {
+         const data = await res.json();
+         setThought(data.thought);
+       }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.isPaused = (showShop || thought !== null);
+    }
+  }, [showShop, thought]);
+
+  const handleStateChange = useCallback((newState: GameState, leveledUp: boolean) => {
+    setGameState(prev => {
+      if (prev.dimension !== newState.dimension) {
+        audio.setWorld(newState.dimension);
+      }
+      return newState;
+    });
+    
+    if (leveledUp) {
+      audio.playLevelUp();
+      if (newState.level % 2 === 0) {
+         fetchVoidThought(newState.level, newState.totalMass);
+      }
+    }
+  }, [fetchVoidThought]);
+
+  const handleAbsorb = useCallback((tier: number) => {
+    audio.playAbsorb(tier);
+  }, []);
+
+  const initGame = async () => {
+    await audio.init();
+    setStarted(true);
+    
+    // Clear initial thought after a few seconds
+    setTimeout(() => {
+      setThought(null);
+    }, 6000);
+  };
+
+  useEffect(() => {
+    if (!canvasRef.current || !started) return;
+
+    engineRef.current = new GameEngine(canvasRef.current, handleStateChange, handleAbsorb, handleAchievement);
+    // Sync initial state from engine's load()
+    setGameState(engineRef.current.state);
+    audio.setWorld(engineRef.current.state.dimension);
+    
+    engineRef.current.start();
+
+    const handleResize = () => engineRef.current?.resize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      engineRef.current?.stop();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [started, handleStateChange, handleAbsorb]);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) {
+      if (engineRef.current) {
+         engineRef.current.isRepulsing = true;
+         setIsRepulsing(true);
+         audio.playRepulse();
+      }
+    } else {
+      if (engineRef.current) engineRef.current.isPulling = true;
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (e.button === 2) {
+      if (engineRef.current) engineRef.current.isRepulsing = false;
+      setIsRepulsing(false);
+    } else {
+      if (engineRef.current) engineRef.current.isPulling = false;
+    }
+  };
+
+  const [pulseRate, setPulseRate] = useState(1);
+  const clickTimes = useRef<number[]>([]);
+  const lastClickTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (!started) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      // Remove clicks older than 3 seconds
+      clickTimes.current = clickTimes.current.filter(t => now - t < 3000);
+      
+      const rate = 1 + (clickTimes.current.length * 0.2);
+      setPulseRate(rate);
+
+      if (now - lastClickTimeRef.current > 15000) {
+        // Idle for 15 seconds, play ambient note
+        audio.playAmbientHint();
+        lastClickTimeRef.current = now; // reset to avoid spamming
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [started]);
+
+  const recordClick = () => {
+      const now = Date.now();
+      clickTimes.current.push(now);
+      lastClickTimeRef.current = now;
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+      recordClick();
+      if (engineRef.current && canvasRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          engineRef.current.handleCanvasClick(e.clientX - rect.left, e.clientY - rect.top);
+          audio.playManualHarvest((e.clientX / window.innerWidth) * 2 - 1);
+      }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+     e.preventDefault();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+     if(e.code === 'Space' && engineRef.current) {
+         engineRef.current.triggerSupernova();
+         audio.playSupernova();
+     }
+  };
+
+  useEffect(() => {
+     window.addEventListener('keydown', handleKeyDown);
+     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (engineRef.current && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      // Handle pointer coords within canvas
+      engineRef.current.mouseX = e.clientX - rect.left;
+      engineRef.current.mouseY = e.clientY - rect.top;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 w-full h-full bg-[#050505] overflow-hidden selection:bg-gray-800 touch-none">
+      
+      {!started && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#050505]">
+          <div className="flex flex-col items-center gap-12 max-w-sm text-center">
+            <h1 className="font-sans text-5xl font-light text-white tracking-widest uppercase">ОМНИЯ</h1>
+            <p className="font-mono text-sm text-gray-500 leading-relaxed">
+              Поглощайте фрагменты, чтобы расти.<br/>
+              Медитация на бесконечность и гравитацию.
+            </p>
+            <button 
+              onClick={initGame}
+              className="px-8 py-4 border border-gray-700 rounded-full text-white font-mono text-sm uppercase tracking-[0.2em] hover:bg-white hover:text-black transition-all duration-500 ease-out"
+            >
+              Войти в Пустоту
+            </button>
+          </div>
+        </div>
+      )}
+
+      {started && (
+        <>
+          <div className="absolute top-0 left-0 w-full h-1 z-20 bg-gray-900/50">
+            <div 
+              className="h-full bg-gradient-to-r from-gray-500 via-white to-gray-500 transition-all duration-1000 ease-out"
+              style={{ width: `${((gameState.level % 5) / 5) * 100}%` }}
+            />
+          </div>
+
+          <AnimatePresence>
+             {recentAchievement && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -50 }}
+                  animate={{ opacity: 1, y: 16 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center gap-3 shadow-2xl"
+                >
+                  <div className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" />
+                  <span className="font-sans text-sm tracking-wide text-white font-medium">Достижение разблокировано:</span>
+                  <span className="font-mono text-xs text-yellow-100">{recentAchievement.name}</span>
+                </motion.div>
+             )}
+          </AnimatePresence>
+
+          <canvas
+            ref={canvasRef}
+            className={`absolute inset-0 cursor-crosshair touch-none transition-all duration-300 ${isRepulsing ? 'contrast-150 saturate-200 hue-rotate-15 blur-[2px] scale-[1.02]' : ''}`}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerOut={handlePointerUp}
+            onPointerMove={handlePointerMove}
+            onClick={handleClick}
+            onContextMenu={handleContextMenu}
+          />
+          
+          {/* Pulse Companion */}
+          <div className="absolute bottom-6 right-6 z-30 pointer-events-none flex items-center justify-center">
+             <motion.div
+                animate={{
+                   scale: [1, 1.1 + pulseRate * 0.1, 1],
+                   opacity: [0.5, 0.8, 0.5],
+                   rotate: gameState.totalMass > 100000 ? [0, 90, 180] : gameState.totalMass > 10000 ? [45, 45, 45] : 0,
+                   borderRadius: gameState.totalMass > 100000 ? ["10%", "50%", "10%"] : gameState.totalMass > 10000 ? "15%" : "50%",
+                   boxShadow: [
+                      `0 0 ${10 * pulseRate}px rgba(200,200,255,0.2)`,
+                      `0 0 ${20 * pulseRate}px rgba(200,200,255,0.6)`,
+                      `0 0 ${10 * pulseRate}px rgba(200,200,255,0.2)`
+                   ]
+                }}
+                transition={{
+                   duration: 2 / pulseRate,
+                   repeat: Infinity,
+                   ease: "easeInOut"
+                }}
+                className={`w-12 h-12 bg-indigo-200/20 backdrop-blur-sm border flex items-center justify-center ${gameState.totalMass > 100000 ? 'border-purple-400' : gameState.totalMass > 10000 ? 'border-orange-200/80' : 'border-indigo-200/50'}`}
+             >
+                <div className={`w-4 h-4 bg-white/70 ${gameState.totalMass > 10000 ? 'rounded-sm' : 'rounded-full'}`} />
+             </motion.div>
+             <span className="absolute -top-6 whitespace-nowrap font-mono text-[10px] text-indigo-300/50 uppercase tracking-widest hidden md:block">
+               Пульс: {pulseRate.toFixed(1)}x
+             </span>
+          </div>
+
+          <VoidHUD 
+            state={gameState} 
+            thought={thought}
+            showShop={showShop}
+            setShowShop={setShowShop}
+            setThought={setThought}
+            onPrestige={() => engineRef.current?.prestige()}
+            onBuyUpgrade={(key, cost) => engineRef.current?.buyUpgrade(key, cost)} 
+          />
+        </>
+      )}
+    </div>
+  );
+}
