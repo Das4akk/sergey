@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameEngine, GameState } from './lib/GameEngine';
 import { audio } from './lib/AudioEngine';
 import { VoidHUD } from './components/VoidHUD';
+import { GalaxyMap } from './components/GalaxyMap';
 import { AnimatePresence, motion } from 'motion/react';
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
   const [thought, setThought] = useState<string | null>("Прими сингулярность.\nЛевая кнопка — поглощение.\nПравая кнопка — отталкивание.\nКлик — жатва.");
   const [started, setStarted] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
   const [isRepulsing, setIsRepulsing] = useState(false);
 
   const [recentAchievement, setRecentAchievement] = useState<{id: string, name: string} | null>(null);
@@ -111,9 +113,9 @@ export default function App() {
 
   useEffect(() => {
     if (engineRef.current) {
-      engineRef.current.isPaused = (showShop || thought !== null);
+      engineRef.current.isPaused = (showShop || thought !== null || showAnalysis);
     }
-  }, [showShop, thought]);
+  }, [showShop, thought, showAnalysis]);
 
   const handleStateChange = useCallback((newState: GameState, leveledUp: boolean) => {
     setGameState(prev => {
@@ -165,6 +167,7 @@ export default function App() {
   }, [started, handleStateChange, handleAbsorb]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (engineRef.current) engineRef.current.wakeUp();
     if (e.button === 2) {
       if (engineRef.current) {
          engineRef.current.isRepulsing = true;
@@ -181,11 +184,40 @@ export default function App() {
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (e.button === 2) {
+    if (engineRef.current) engineRef.current.wakeUp();
+    if (e.button === 2 || isRepulsing) {
       if (engineRef.current) engineRef.current.isRepulsing = false;
       setIsRepulsing(false);
     } else {
       if (engineRef.current) engineRef.current.isPulling = false;
+    }
+  };
+
+  // Mobile manual repulse bindings
+  const manualRepulseStart = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (engineRef.current) {
+      engineRef.current.wakeUp();
+      engineRef.current.isRepulsing = true;
+      setIsRepulsing(true);
+      audio.playRepulse();
+    }
+  };
+
+  const manualRepulseEnd = (e: React.TouchEvent | React.MouseEvent) => {
+    e.preventDefault();
+    if (engineRef.current) {
+      engineRef.current.wakeUp();
+      engineRef.current.isRepulsing = false;
+      setIsRepulsing(false);
+    }
+  };
+
+  const triggerMobileBurst = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (engineRef.current) {
+      engineRef.current.wakeUp();
+      engineRef.current.triggerPulsarBurst();
     }
   };
 
@@ -221,6 +253,7 @@ export default function App() {
   const handleClick = (e: React.MouseEvent) => {
       recordClick();
       if (engineRef.current && canvasRef.current) {
+          engineRef.current.wakeUp();
           const rect = canvasRef.current.getBoundingClientRect();
           engineRef.current.handleCanvasClick(e.clientX - rect.left, e.clientY - rect.top);
           audio.playManualHarvest((e.clientX / window.innerWidth) * 2 - 1);
@@ -233,6 +266,7 @@ export default function App() {
 
   const handleKeyDown = (e: KeyboardEvent) => {
      if(e.code === 'Space' && engineRef.current) {
+         engineRef.current.wakeUp();
          engineRef.current.triggerSupernova();
          audio.playSupernova();
      }
@@ -245,6 +279,7 @@ export default function App() {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (engineRef.current && canvasRef.current) {
+      engineRef.current.wakeUp();
       const rect = canvasRef.current.getBoundingClientRect();
       // Handle pointer coords within canvas
       engineRef.current.mouseX = e.clientX - rect.left;
@@ -307,6 +342,79 @@ export default function App() {
             onClick={handleClick}
             onContextMenu={handleContextMenu}
           />
+
+          {/* Void Breathing (Дыхание Пустоты) */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10 opacity-30">
+            <motion.div
+              animate={{
+                 scale: [1, 1.2 + pulseRate * 0.15, 1],
+                 opacity: [0.1, 0.3, 0.1],
+              }}
+              transition={{
+                 duration: 4 / pulseRate,
+                 repeat: Infinity,
+                 ease: "easeInOut"
+              }}
+              className="w-[40vh] h-[40vh] rounded-full border border-white/20 shadow-[0_0_100px_rgba(255,255,255,0.1)_inset]"
+            />
+          </div>
+          
+          {/* Mobile Controls */}
+          <div className="md:hidden absolute bottom-24 left-4 right-4 flex justify-between z-40 pointer-events-none">
+            <button 
+              className="pointer-events-auto bg-white/5 border border-white/20 backdrop-blur-md px-6 py-4 rounded-3xl font-mono text-xs uppercase tracking-widest text-gray-300 active:bg-white/20"
+              onTouchStart={manualRepulseStart}
+              onMouseDown={manualRepulseStart}
+              onTouchEnd={manualRepulseEnd}
+              onMouseUp={manualRepulseEnd}
+              onPointerOut={manualRepulseEnd}
+              onContextMenu={e => e.preventDefault()}
+            >
+              Отток
+            </button>
+            <button 
+              className="pointer-events-auto bg-indigo-500/10 border border-indigo-500/30 backdrop-blur-md px-6 py-4 rounded-3xl font-mono text-xs uppercase tracking-widest text-indigo-300 active:bg-indigo-500/30"
+              onClick={triggerMobileBurst}
+              onContextMenu={e => e.preventDefault()}
+            >
+              Пульсар
+            </button>
+          </div>
+
+          {/* Galaxy Map Trigger */}
+          <button 
+            className="absolute top-6 right-6 z-40 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 backdrop-blur-md rounded-full font-mono text-[10px] tracking-widest uppercase text-indigo-300 transition-colors"
+            onClick={() => setShowAnalysis(true)}
+          >
+            Галактическая Карта
+          </button>
+          
+          {/* Galaxy Map Modal */}
+          <AnimatePresence>
+            {showAnalysis && (
+              <GalaxyMap 
+                 state={gameState} 
+                 onClose={() => setShowAnalysis(false)} 
+                 onJump={(id) => {
+                     if (engineRef.current) {
+                         engineRef.current.jumpToPlanet(id);
+                         engineRef.current.flashTimer = 2.0;
+                         audio.playSupernova(); // We can reuse supernova sound
+                         setShowAnalysis(false);
+                     }
+                 }}
+                 onUnlock={(id, cost) => {
+                     if (engineRef.current && engineRef.current.state.maxMass >= cost) {
+                         engineRef.current.state.unlockedPlanets.push(id);
+                         engineRef.current.save();
+                         engineRef.current.onStateChange({ ...engineRef.current.state }, false);
+                         audio.playPrestige();
+                     }
+                 }}
+                 onBuyOmniUpgrade={(key, cost) => engineRef.current?.buyOmniUpgrade(key, cost)}
+              />
+            )}
+          </AnimatePresence>
           
           {/* Pulse Companion */}
           <div className="absolute bottom-6 right-6 z-30 pointer-events-none flex items-center justify-center">
@@ -346,7 +454,7 @@ export default function App() {
               audio.playPrestige();
               engineRef.current?.prestige();
             }}
-            onBuyUpgrade={(key, cost) => engineRef.current?.buyUpgrade(key, cost)} 
+            onBuyUpgrade={(key, cost, count) => engineRef.current?.buyUpgrade(key, cost, count)} 
           />
         </>
       )}

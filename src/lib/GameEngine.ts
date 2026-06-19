@@ -1,4 +1,16 @@
+export interface PlanetSave {
+  level: number;
+  mass: number;
+  totalMass: number;
+  maxMass: number;
+  dimension: number;
+  stardust: number;
+  prestigeCount: number;
+  upgrades: any;
+}
+
 export interface GameState {
+  planetProgress?: Record<string, PlanetSave>;
   level: number;
   mass: number;
   totalMass: number;
@@ -8,6 +20,10 @@ export interface GameState {
   stardust: number;
   prestigeCount: number;
   achievements: string[];
+  massHistory?: { t: number, m: number }[];
+  omniMatter: number;
+  currentPlanet: string;
+  unlockedPlanets: string[];
   upgrades: {
     gravityPower: number;
     spawnRate: number;
@@ -33,6 +49,39 @@ export interface GameState {
     astralProjection: number;
     quantunTunnelling: number;
     entropyWeaver: number;
+    m_momentum: number;
+    m_hydrodynamics: number;
+    m_metabolism: number;
+    m_photosynthesis: number;
+    m_chemosynthesis: number;
+    m_osmosis: number;
+    m_parasitism: number;
+    m_filter_feeding: number;
+    m_adaptation: number;
+    m_regeneration: number;
+    m_cell_division: number;
+    m_symbiosis: number;
+    m_echolocation: number;
+    m_predator: number;
+    m_apex_predator: number;
+    m_camouflage: number;
+    m_electric_discharge: number;
+    m_hardened_shell: number;
+    m_extremophile: number;
+    m_void_adaptation: number;
+    m_stellar_wind: number;
+    m_nebular_nursery: number;
+    m_cosmic_web: number;
+    m_bioluminescence: number;
+    m_spawning_pool: number;
+    m_neural_network: number;
+    m_hive_mind: number;
+    m_mitosis: number;
+    m_elasticity: number;
+    m_transcendence: number;
+    o_omniYield: number;
+    o_omniPull: number;
+    o_omniEcho: number;
   }
 }
 
@@ -75,6 +124,10 @@ export class GameEngine {
     dimension: 0,
     echoes: 0,
     stardust: 0,
+    prestigeCount: 0,
+    omniMatter: 0,
+    currentPlanet: 'abyss',
+    unlockedPlanets: ['abyss'],
     achievements: [],
     upgrades: {
       gravityPower: 1,
@@ -101,6 +154,39 @@ export class GameEngine {
       astralProjection: 0,
       quantunTunnelling: 0,
       entropyWeaver: 0,
+      m_momentum: 0,
+      m_hydrodynamics: 0,
+      m_metabolism: 0,
+      m_photosynthesis: 0,
+      m_chemosynthesis: 0,
+      m_osmosis: 0,
+      m_parasitism: 0,
+      m_filter_feeding: 0,
+      m_adaptation: 0,
+      m_regeneration: 0,
+      m_cell_division: 0,
+      m_symbiosis: 0,
+      m_echolocation: 0,
+      m_predator: 0,
+      m_apex_predator: 0,
+      m_camouflage: 0,
+      m_electric_discharge: 0,
+      m_hardened_shell: 0,
+      m_extremophile: 0,
+      m_void_adaptation: 0,
+      m_stellar_wind: 0,
+      m_nebular_nursery: 0,
+      m_cosmic_web: 0,
+      m_bioluminescence: 0,
+      m_spawning_pool: 0,
+      m_neural_network: 0,
+      m_hive_mind: 0,
+      m_mitosis: 0,
+      m_elasticity: 0,
+      m_transcendence: 0,
+      o_omniYield: 0,
+      o_omniPull: 0,
+      o_omniEcho: 0,
     }
   };
 
@@ -121,6 +207,12 @@ export class GameEngine {
   
   public flashTimer: number = 0;
   public shakeTimer: number = 0;
+
+  public anomalyTimer: number = 300; // Trigger anomaly every 5 minutes (300s)
+  public activeAnomaly: { type: 'heavy' | 'zero' | 'repulse', duration: number } | null = null;
+  
+  public voidSleepTimer: number = 0;
+  public inVoidSleep: boolean = false;
 
   constructor(
     canvas: HTMLCanvasElement, 
@@ -145,6 +237,7 @@ export class GameEngine {
 
   public save() {
     try {
+      if (this.state.planetProgress) this.state.planetProgress[this.state.currentPlanet] = this.getPlanetSave();
       localStorage.setItem('omnia_save_v4', JSON.stringify(this.state));
     } catch (e) {}
   }
@@ -158,11 +251,95 @@ export class GameEngine {
           ...this.state,
           ...parsed,
           achievements: parsed.achievements || [],
+          unlockedPlanets: parsed.unlockedPlanets || ['abyss'],
           stardust: parsed.stardust || 0,
+          planetProgress: parsed.planetProgress || {},
           upgrades: { ...this.state.upgrades, ...(parsed.upgrades || {}) }
         };
+        if (!this.state.planetProgress) this.state.planetProgress = {};
+        if (!this.state.planetProgress['abyss']) {
+           this.state.planetProgress['abyss'] = this.getPlanetSave();
+        }
       }
     } catch (e) {}
+  }
+
+  private getPlanetSave(): PlanetSave {
+      const upg = { ...this.state.upgrades } as any;
+      const globals = ['singularityDepth', 'stellarForge', 'voidMonolith', 'tachyonWeb', 'quantunTunnelling', 'entropyWeaver', 'o_omniYield', 'o_omniPull', 'o_omniEcho'];
+      for (let g of globals) {
+          delete upg[g];
+      }
+      return {
+          level: this.state.level,
+          mass: this.state.mass,
+          totalMass: this.state.totalMass,
+          maxMass: this.state.maxMass,
+          dimension: this.state.dimension,
+          stardust: this.state.stardust,
+          prestigeCount: this.state.prestigeCount || 0,
+          upgrades: upg
+      };
+  }
+
+  public jumpToPlanet(planetId: string) {
+      if (!this.state.planetProgress) this.state.planetProgress = {};
+      this.state.planetProgress[this.state.currentPlanet] = this.getPlanetSave();
+      
+      this.state.currentPlanet = planetId;
+      const data = this.state.planetProgress[planetId];
+      
+      const globalUpg = {
+          singularityDepth: this.state.upgrades.singularityDepth,
+          stellarForge: this.state.upgrades.stellarForge,
+          voidMonolith: this.state.upgrades.voidMonolith,
+          tachyonWeb: this.state.upgrades.tachyonWeb,
+          quantunTunnelling: this.state.upgrades.quantunTunnelling,
+          entropyWeaver: this.state.upgrades.entropyWeaver,
+          o_omniYield: this.state.upgrades.o_omniYield,
+          o_omniPull: this.state.upgrades.o_omniPull,
+          o_omniEcho: this.state.upgrades.o_omniEcho,
+      };
+
+      if (data) {
+          this.state.level = data.level;
+          this.state.mass = data.mass;
+          this.state.totalMass = data.totalMass;
+          this.state.maxMass = data.maxMass;
+          this.state.dimension = data.dimension;
+          this.state.stardust = data.stardust;
+          this.state.prestigeCount = data.prestigeCount || 0;
+          this.state.upgrades = { ...data.upgrades, ...globalUpg } as any;
+      } else {
+          this.state.level = 1;
+          this.state.mass = 0;
+          this.state.totalMass = 0;
+          this.state.maxMass = 50;
+          this.state.dimension = 0;
+          this.state.stardust = 0;
+          this.state.prestigeCount = 0;
+          this.state.upgrades = {
+              gravityPower: 1, spawnRate: 1, passivePull: 0, multiplier: 1, orbitals: 0,
+              entanglement: 0, fractal: 0, radiance: 0, chronosphere: 0, quasar: 0,
+              darkMatterSiphon: 0, eventHorizon: 0, nebulaCollector: 0, starWeaver: 0,
+              cosmicResonance: 0, pulsarBurst: 0, voidwalker: 0, astralProjection: 0,
+              m_momentum: 0, m_hydrodynamics: 0, m_metabolism: 0, m_photosynthesis: 0,
+              m_chemosynthesis: 0, m_osmosis: 0, m_parasitism: 0, m_filter_feeding: 0,
+              m_adaptation: 0, m_regeneration: 0, m_cell_division: 0, m_symbiosis: 0,
+              m_echolocation: 0, m_predator: 0, m_apex_predator: 0, m_camouflage: 0,
+              m_electric_discharge: 0, m_hardened_shell: 0, m_extremophile: 0, m_void_adaptation: 0,
+              m_stellar_wind: 0, m_nebular_nursery: 0, m_cosmic_web: 0, m_bioluminescence: 0,
+              m_spawning_pool: 0, m_neural_network: 0, m_hive_mind: 0, m_mitosis: 0,
+              m_elasticity: 0, m_transcendence: 0,
+              ...globalUpg
+          } as any;
+      }
+
+      this.particles = [];
+      this.orbitingParticles = [];
+      this.singularityCharge = 0;
+      this.save();
+      this.onStateChange({ ...this.state }, false);
   }
 
   public resize() {
@@ -185,7 +362,7 @@ export class GameEngine {
     cancelAnimationFrame(this.animationId);
   }
 
-  public buyUpgrade(key: keyof GameState['upgrades'], cost: number) {
+  public buyUpgrade(key: keyof GameState['upgrades'], cost: number, count: number = 1) {
     const echoUpgrades = ['singularityDepth', 'stellarForge', 'voidMonolith', 'tachyonWeb', 'quantunTunnelling', 'entropyWeaver'];
     const stardustUpgrades = ['darkMatterSiphon', 'eventHorizon', 'nebulaCollector', 'starWeaver', 'cosmicResonance', 'pulsarBurst', 'voidwalker', 'astralProjection'];
     const isEcho = echoUpgrades.includes(key);
@@ -194,7 +371,7 @@ export class GameEngine {
     if (isEcho) {
       if (this.state.echoes >= cost) {
         this.state.echoes -= cost;
-        this.state.upgrades[key] += 1;
+        this.state.upgrades[key] += count;
         this.save();
         this.onStateChange({ ...this.state }, false);
         return true;
@@ -202,7 +379,7 @@ export class GameEngine {
     } else if (isStardust) {
       if (this.state.stardust >= cost) {
         this.state.stardust -= cost;
-        this.state.upgrades[key] += 1;
+        this.state.upgrades[key] += count;
         this.save();
         this.onStateChange({ ...this.state }, false);
         return true;
@@ -210,11 +387,22 @@ export class GameEngine {
     } else {
       if (this.state.mass >= cost) {
         this.state.mass -= cost;
-        this.state.upgrades[key] += 1;
+        this.state.upgrades[key] += count;
         this.save();
         this.onStateChange({ ...this.state }, false);
         return true;
       }
+    }
+    return false;
+  }
+
+  public buyOmniUpgrade(key: string, cost: number) {
+    if (this.state.omniMatter >= cost) {
+       this.state.omniMatter -= cost;
+       (this.state.upgrades as any)[key] = ((this.state.upgrades as any)[key] || 0) + 1;
+       this.save();
+       this.onStateChange({ ...this.state }, false);
+       return true;
     }
     return false;
   }
@@ -224,8 +412,11 @@ export class GameEngine {
      if (this.state.level < reqLevel) return;
      const gainedEchoes = Math.max(0, Math.floor(this.state.level * 1.5) + Math.floor(this.state.totalMass / 10000));
      const entropyMultiplier = 1 + (this.state.upgrades.entropyWeaver * 0.1);
+     const omniBuff = 1 + (this.state.upgrades.o_omniEcho * 2.0);
+     let totalEchoes = Math.floor(gainedEchoes * entropyMultiplier * omniBuff);
+     if (this.state.currentPlanet === 'blackhole') totalEchoes *= 500;
      
-     this.state.echoes += Math.floor(gainedEchoes * entropyMultiplier);
+     this.state.echoes += totalEchoes;
      this.state.prestigeCount = (this.state.prestigeCount || 0) + 1;
      this.state.level = 1;
      this.state.mass = 0;
@@ -251,6 +442,12 @@ export class GameEngine {
      this.state.upgrades.cosmicResonance = 0;
      this.state.upgrades.pulsarBurst = 0;
      this.state.upgrades.voidwalker = 0;
+     this.state.upgrades.astralProjection = 0;
+     
+     const mutations = ['m_momentum', 'm_hydrodynamics', 'm_metabolism', 'm_photosynthesis', 'm_chemosynthesis', 'm_osmosis', 'm_parasitism', 'm_filter_feeding', 'm_adaptation', 'm_regeneration', 'm_cell_division', 'm_symbiosis', 'm_echolocation', 'm_predator', 'm_apex_predator', 'm_camouflage', 'm_electric_discharge', 'm_hardened_shell', 'm_extremophile', 'm_void_adaptation', 'm_stellar_wind', 'm_nebular_nursery', 'm_cosmic_web', 'm_bioluminescence', 'm_spawning_pool', 'm_neural_network', 'm_hive_mind', 'm_mitosis', 'm_elasticity', 'm_transcendence'];
+     for(let m of mutations) {
+         (this.state.upgrades as any)[m] = 0;
+     }
      
      this.particles = [];
      this.singularityCharge = 0;
@@ -277,7 +474,7 @@ export class GameEngine {
               this.onAbsorb(p.tier);
               
               // Active clicking increases combo
-              const maxCombo = 10 + (this.state.upgrades.voidMonolith * 10);
+              const maxCombo = this.state.currentPlanet === 'pulsar' ? 1000 : 10 + (this.state.upgrades.voidMonolith * 10);
               this.combo = Math.min(this.combo + 1, maxCombo);
               this.comboTimer = 2.0 + (this.state.upgrades.tachyonWeb * 1.0);
               
@@ -338,6 +535,11 @@ export class GameEngine {
       }
   }
 
+  public wakeUp() {
+    this.voidSleepTimer = 0;
+    this.inVoidSleep = false;
+  }
+
   private loop(now: number) {
     const dt = (now - this.lastTime) / 1000; // in seconds
     this.lastTime = now;
@@ -353,16 +555,85 @@ export class GameEngine {
     this.animationId = requestAnimationFrame(this.loop.bind(this));
   }
 
+  private historyTimer: number = 0;
+
   private update(dt: number) {
     this.dtAccumulator += dt;
     this.orbitalAngle += dt * 2; // Rotate orbitals
 
     if (this.flashTimer > 0) this.flashTimer -= dt;
     if (this.shakeTimer > 0) this.shakeTimer -= dt;
+    
+    // History logging (every 1 second)
+    this.historyTimer += dt;
+    if (this.historyTimer >= 1.0) {
+        this.historyTimer = 0;
+        
+        // Passive OmniMatter generation from conquered planets
+        const omniPerSec = (this.state.unlockedPlanets.length - 1) * 10; // First is abyss, so -1
+        if (omniPerSec > 0) {
+            if (!this.state.omniMatter) this.state.omniMatter = 0;
+            this.state.omniMatter += omniPerSec * (this.state.currentPlanet === 'abyss' ? 100 : 1);
+        }
+    }
+    
+    // Void sleep logic
+    this.voidSleepTimer += dt;
+    if (this.voidSleepTimer > 60) {
+        this.inVoidSleep = true;
+        // passive resource generation in sleep
+        if (Math.random() < 0.1 * dt) {
+            this.state.stardust += 1;
+        }
+        if (Math.random() < 0.01 * dt) {
+            this.state.echoes += 1;
+        }
+    }
+    
+    // Temporal anomalies
+    if (this.activeAnomaly) {
+        this.activeAnomaly.duration -= dt;
+        if (this.activeAnomaly.duration <= 0) {
+            this.activeAnomaly = null;
+        }
+    } else {
+        this.anomalyTimer -= dt;
+        if (this.anomalyTimer <= 0) {
+            // Trigger new anomaly
+            this.anomalyTimer = 300 + Math.random() * 300; // 5 to 10 minutes
+            const types: ('heavy'|'zero'|'repulse')[] = ['heavy', 'zero', 'repulse'];
+            this.activeAnomaly = {
+                type: types[Math.floor(Math.random() * types.length)],
+                duration: 30 // lasts 30 seconds
+            };
+            this.flashTimer = 1.0;
+        }
+    }
 
-    // Fast follow to eliminate lag
-    this.coreX += (this.mouseX - this.coreX) * 15 * dt;
-    this.coreY += (this.mouseY - this.coreY) * 15 * dt;
+    // Smooth swimming mechanism
+    const dxT = this.mouseX - this.coreX;
+    const dyT = this.mouseY - this.coreY;
+    const distT = Math.hypot(dxT, dyT);
+    
+    // Base speed
+    let speed = 80 + (this.state.upgrades.m_momentum * 15);
+    
+    if (this.isPulling && this.state.mass > 5) {
+        // Boost
+        let boostCost = Math.max(1, 10 - this.state.upgrades.m_metabolism);
+        this.state.mass -= boostCost * dt;
+        speed *= (2 + this.state.upgrades.m_hydrodynamics * 0.5);
+        this.flashTimer = Math.max(this.flashTimer, 0.05);
+    }
+    
+    if (distT > 1) {
+        // We move towards mouse
+        const moveDist = speed * dt;
+        // Limit to not overshoot
+        const actualMove = Math.min(moveDist, distT);
+        this.coreX += (dxT / distT) * actualMove;
+        this.coreY += (dyT / distT) * actualMove;
+    }
 
     // Spawn mechanism
     const spawnRateSeconds = 0.5 / (this.state.upgrades.spawnRate * 0.5 + 0.5);
@@ -393,13 +664,18 @@ export class GameEngine {
     }
 
     // Process particles
+    if (this.state.upgrades.m_photosynthesis > 0) {
+        this.addMass((this.state.upgrades.m_photosynthesis * 0.1) * dt);
+    }
+
     let absorbedCount = 0;
     const coreRadius = 8 + Math.log10(this.state.totalMass + 1) * 2 + (this.state.upgrades.radiance * 2);
     
-    const activePullSt = this.isPulling ? (150 * (1 + this.state.upgrades.gravityPower * 0.2)) : 0;
-    const passivePullSt = 20 * this.state.upgrades.passivePull;
-    const pullSt = activePullSt + passivePullSt;
-    const repulseSt = this.isRepulsing ? 300 : 0;
+    // Passive pull expanded heavily by m_osmosis
+    const pullSt = 20 * this.state.upgrades.passivePull + (this.state.upgrades.m_osmosis * 30);
+    const repulseSt = this.isRepulsing ? 300 + (this.state.upgrades.m_stellar_wind * 100) : 0;
+    
+    const osmoticRadius = coreRadius * (1 + this.state.upgrades.m_osmosis * 0.2);
 
     // Singularity Charge Decay when not pulling
     if (!this.isPulling && this.singularityCharge > 0) {
@@ -500,17 +776,37 @@ export class GameEngine {
       }
 
       // Gravity / Repulsion
-      if (pullSt > 0 && !this.isRepulsing) {
+      let actualPullSt = pullSt * (1 + this.state.upgrades.o_omniPull * 0.5);
+      let actualRepulseSt = repulseSt;
+      
+      if (this.state.currentPlanet === 'blackhole') {
+          actualPullSt *= 50; // Extreme base gravity (Imbalance boost)
+      } else if (this.state.currentPlanet === 'nebula') {
+          actualPullSt *= 0.5; // Low gravity
+      }
+      
+      if (this.activeAnomaly) {
+          if (this.activeAnomaly.type === 'heavy') {
+              actualPullSt *= 5; // extremely strong gravity
+          } else if (this.activeAnomaly.type === 'zero') {
+              actualPullSt = 0; // zero gravity
+          } else if (this.activeAnomaly.type === 'repulse') {
+              actualRepulseSt = Math.max(actualRepulseSt, 200); // everything pushes away
+              actualPullSt = 0;
+          }
+      }
+
+      if (actualPullSt > 0 && !this.isRepulsing) {
         const pullRadius = 300 + (this.state.upgrades.gravityPower * 50);
         if (dist < pullRadius) {
-           const force = pullSt / Math.max(10, dist);
+           const force = actualPullSt / Math.max(10, dist);
            p.vx += (dx / dist) * force * dt * 50; 
            p.vy += (dy / dist) * force * dt * 50;
         }
-      } else if (repulseSt > 0) {
+      } else if (actualRepulseSt > 0) {
         const repulseRadius = 400;
         if (dist < repulseRadius) {
-           const force = repulseSt / Math.max(10, dist);
+           const force = actualRepulseSt / Math.max(10, dist);
            p.vx -= (dx / dist) * force * dt * 50; 
            p.vy -= (dy / dist) * force * dt * 50;
         }
@@ -563,11 +859,26 @@ export class GameEngine {
     if (absorbedCount > 0) {
       this.addMass(absorbedCount);
     }
+    
+    // Pulsar mass drain
+    if (this.state.currentPlanet === 'pulsar' && this.state.mass > 0) {
+        this.state.mass -= dt * this.state.level * 2;
+        if (this.state.mass < 0) this.state.mass = 0;
+    }
   }
 
   private handleAbsorption(p: Particle): number {
       this.onAbsorb(p.tier);
       let yieldMass = p.tier * this.state.upgrades.multiplier;
+      
+      // Omni Yield
+      yieldMass *= (1 + this.state.upgrades.o_omniYield * 1.5);
+      
+      if (this.state.currentPlanet === 'pulsar') {
+          yieldMass *= 3; // Huge mass boost
+      } else if (this.state.currentPlanet === 'nebula') {
+          yieldMass *= 0.2; // Tiny mass base
+      }
       
       const particleColor = p.isAntimatter ? '#ff3333' : p.isVoidSpark ? '#ccffff' : p.isComet ? '#ffaa44' : p.tier > 1 ? '#bbff00' : '#888888';
       this.fractures.push({x: p.x, y: p.y, life: 0.4, maxLife: 0.4, isSmall: true, color: particleColor});
@@ -579,9 +890,37 @@ export class GameEngine {
           }
       }
 
+      if (p.isAntimatter) {
+          let bhMod = this.state.currentPlanet === 'blackhole' ? 3 : 1;
+          if (this.state.upgrades.m_hardened_shell > 0 && Math.random() < (this.state.upgrades.m_hardened_shell * 0.05 / bhMod)) {
+             // Block penalty
+             this.shakeTimer = 0.1;
+          } else if (this.state.upgrades.m_chemosynthesis > 0) {
+             // Healing instead
+             this.addMass((yieldMass * 2) * (1 + this.state.upgrades.m_chemosynthesis * 0.1));
+             this.flashTimer = 0.2;
+          } else {
+             // Normal penalty
+             let penaltyMult = 0.5 - (this.state.upgrades.m_adaptation * 0.05);
+             if (this.state.currentPlanet === 'blackhole') penaltyMult = 0.1; // extreme punishment
+             penaltyMult = Math.max(0.01, penaltyMult);
+             this.state.mass = Math.floor(this.state.mass * penaltyMult);
+             this.shakeTimer = 0.3;
+             this.flashTimer = 0.2; // Red flash handled in draw
+          }
+          return 0;
+      }
+      
+      if (this.isPulling && this.state.upgrades.m_apex_predator > 0) {
+          yieldMass *= (1 + this.state.upgrades.m_apex_predator * 0.2);
+      }
+
       // Fractal (large particles split into smaller ones)
-      if (p.tier > 1 && this.state.upgrades.fractal > 0) {
-          for(let i=0; i<this.state.upgrades.fractal; i++) {
+      let splits = this.state.upgrades.fractal;
+      if (this.state.currentPlanet === 'nebula') splits = (splits + 2) * 10;
+      
+      if (p.tier > 1 && splits > 0) {
+          for(let i=0; i<splits; i++) {
               this.particles.push({
                  x: p.x, y: p.y,
                  vx: (Math.random()-0.5) * 100, vy: (Math.random()-0.5) * 100,
@@ -592,9 +931,25 @@ export class GameEngine {
       
       // Stardust generation
       let stardustChance = p.isVoidSpark ? 1.0 : (0.01 + this.state.upgrades.nebulaCollector * 0.01);
+      if (this.state.currentPlanet === 'nebula') stardustChance *= 100;
+      
       if (Math.random() < stardustChance) {
           this.state.stardust += p.isVoidSpark ? (5 + Math.floor(Math.random() * 5)) : 1;
       }
+      
+      if (p.isVoidSpark) {
+          this.state.echoes += 1 + this.state.upgrades.cosmicResonance * 1;
+          if (this.state.dimension < 1) this.state.achievements.push('first_echo');
+      }
+
+      if (p.isComet) {
+          this.state.stardust += (10 + this.state.upgrades.starWeaver * 2) * p.tier;
+          if (this.state.dimension < 2) this.state.achievements.push('first_stardust');
+      }
+      
+      yieldMass *= 1 + (this.state.upgrades.m_neural_network * 0.02);
+      
+      this.addMass(yieldMass);
       
       return yieldMass;
   }
@@ -715,12 +1070,19 @@ export class GameEngine {
     const edge = Math.floor(Math.random() * 4);
     let px = 0; let py = 0;
     
+    // Planet mechanics modifiers
+    let isPulsar = this.state.currentPlanet === 'pulsar';
+    let isNebula = this.state.currentPlanet === 'nebula';
+    let isBlackHole = this.state.currentPlanet === 'blackhole';
+    
     const tierRoll = Math.random();
     let tier = 1;
 
     const forgeLevel = this.state.upgrades.stellarForge;
     let tierOddsEpic = 0.1 + (forgeLevel * 0.05);
     let tierOddsLeg = 0.02 + (forgeLevel * 0.01);
+    
+    if (isPulsar) { tierOddsEpic *= 2; tierOddsLeg *= 2; }
     
     const isLegendary = (tierRoll < tierOddsLeg) && this.state.level > 5;
     const isEpic = !isLegendary && (tierRoll < tierOddsEpic) && this.state.level > 2;
@@ -741,7 +1103,7 @@ export class GameEngine {
     
     // Comets
     if (this.state.level >= 3 && Math.random() < 0.05 + (forgeLevel * 0.002)) {
-       const isAm = Math.random() < 0.2;
+       const isAm = Math.random() < (isBlackHole ? 0.6 : 0.2); // More antimatter in blackhole
        this.particles.push({
          x: px, y: py,
          vx: (dx / len) * (speed * 4) + (Math.random() - 0.5)*10,
@@ -771,142 +1133,110 @@ export class GameEngine {
 
     // Dimensional Backgrounds
     const t = performance.now() / 1000;
-    const currentDim = this.state.dimension % 5;
+    const currentDim = this.state.dimension % 10;
     
-    // Clear whole screen instead of overdraw based on dimension
+    // Super minimalistic fluid ambient backgrounds
+    const grad = this.ctx.createRadialGradient(this.width/2, this.height/2, 0, this.width/2, this.height/2, this.width);
     if (currentDim === 0) {
-        // Void - Deep abyss with radial purple-black gradient
-        const grad = this.ctx.createRadialGradient(this.width/2, this.height/2, 0, this.width/2, this.height/2, this.width);
-        grad.addColorStop(0, '#0a0a14');
-        grad.addColorStop(1, '#020205');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        for(let i=0; i<100; i++) {
-           let sx = (i * 137 + t * 10) % this.width;
-           let sy = (i * 251 + t * 5) % this.height;
-           if (sx < 0) sx += this.width; if (sy < 0) sy += this.height;
-           this.ctx.fillRect(sx, sy, 1, 1);
-        }
-        
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-        this.ctx.lineWidth = 1;
-        const spacing = 80;
-        const offsetX = (t * 15) % spacing;
-        const offsetY = (t * 15) % spacing;
-        this.ctx.beginPath();
-        for(let x = offsetX; x < this.width; x += spacing) { this.ctx.moveTo(x, 0); this.ctx.lineTo(x, this.height); }
-        for(let y = offsetY; y < this.height; y += spacing) { this.ctx.moveTo(0, y); this.ctx.lineTo(this.width, y); }
-        this.ctx.stroke();
-    } else if (currentDim === 1) {
-        // Twilight - Smooth shifting magenta/purple gradients
-        const gradX = this.width/2 + Math.sin(t*0.5)*300;
-        const gradY = this.height/2 + Math.cos(t*0.3)*300;
-        const grad = this.ctx.createRadialGradient(gradX, gradY, 0, this.width/2, this.height/2, this.width);
-        grad.addColorStop(0, '#2d1445');
-        grad.addColorStop(0.5, '#160a22');
-        grad.addColorStop(1, '#090212');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        this.ctx.globalCompositeOperation = 'screen';
-        const nebulaCount = 4;
-        for(let i=0; i<nebulaCount; i++) {
-           const nx = this.width/2 + Math.sin(t*0.2 + i*Math.PI*2/nebulaCount) * 400;
-           const ny = this.height/2 + Math.cos(t*0.15 + i*Math.PI*2/nebulaCount) * 400;
-           const ng = this.ctx.createRadialGradient(nx, ny, 0, nx, ny, 600);
-           const hue = 250 + i * 25;
-           ng.addColorStop(0, `hsla(${hue}, 70%, 40%, 0.15)`);
-           ng.addColorStop(1, 'rgba(0, 0, 0, 0)');
-           this.ctx.fillStyle = ng;
-           this.ctx.beginPath();
-           this.ctx.arc(nx, ny, 600, 0, Math.PI*2);
-           this.ctx.fill();
-        }
-        this.ctx.globalCompositeOperation = 'source-over';
-    } else if (currentDim === 2) {
-        // Dawn - Warm cyan and amber gradients
-        const grad = this.ctx.createLinearGradient(Math.sin(t*0.2)*200, 0, this.width, this.height);
-        grad.addColorStop(0, '#0a2a2a');
-        grad.addColorStop(0.5, '#051b22');
-        grad.addColorStop(1, '#051111');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.width, this.height);
-        
-        this.ctx.strokeStyle = 'rgba(50, 255, 200, 0.05)';
-        this.ctx.lineWidth = 1.5;
-        this.ctx.beginPath();
-        const rays = 60;
-        for(let i=0; i<rays; i++) {
-            const angle = (i / rays) * Math.PI * 2 + t * 0.05;
-            this.ctx.moveTo(this.coreX, this.coreY);
-            const r = this.width * 1.5;
-            this.ctx.lineTo(this.coreX + Math.cos(angle)*r, this.coreY + Math.sin(angle)*r);
-        }
-        this.ctx.stroke();
-        
-        this.ctx.fillStyle = 'rgba(100, 255, 200, 0.5)';
-        for(let i=0; i<50; i++) {
-            const pr = ((i*123 + t * 50) % this.width);
-            const pa = (i*0.1 + t * 0.1);
-            this.ctx.fillRect(this.coreX + Math.cos(pa)*pr, this.coreY + Math.sin(pa)*pr, 2, 2);
-        }
+        grad.addColorStop(0, '#0c111a'); grad.addColorStop(1, '#05070a');
+    } else if (currentDim === 1) { 
+        grad.addColorStop(0, '#1a0c16'); grad.addColorStop(1, '#080407');
+    } else if (currentDim === 2) { 
+        grad.addColorStop(0, '#0c1a16'); grad.addColorStop(1, '#040807');
     } else if (currentDim === 3) {
-        // Ether - Deep blue and teal crystalline structures
-        const grad = this.ctx.createRadialGradient(this.width/2, this.height/2, 0, this.width/2, this.height/2, this.width*1.2);
-        grad.addColorStop(0, '#0a1d3a');
-        grad.addColorStop(1, '#030b14');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        grad.addColorStop(0, '#100c1a'); grad.addColorStop(1, '#050408');
+    } else if (currentDim === 4) {
+        grad.addColorStop(0, '#1a180c'); grad.addColorStop(1, '#080704');
+    } else if (currentDim === 5) {
+        grad.addColorStop(0, '#1a0c15'); grad.addColorStop(1, '#080406');
+    } else if (currentDim === 6) {
+        grad.addColorStop(0, '#0b1a18'); grad.addColorStop(1, '#040807');
+    } else if (currentDim === 7) {
+        grad.addColorStop(0, '#141a0b'); grad.addColorStop(1, '#060804');
+    } else if (currentDim === 8) {
+        grad.addColorStop(0, '#110b1a'); grad.addColorStop(1, '#060408');
+    } else { 
+        grad.addColorStop(0, '#1a0b0b'); grad.addColorStop(1, '#080404');
+    }
+    this.ctx.fillStyle = grad;
+    this.ctx.fillRect(0, 0, this.width, this.height);
+
+    // 3D Planets in the background for effect
+    const numPlanets = 3 + (currentDim % 4);
+    for (let i = 0; i < numPlanets; i++) {
+        const seed = currentDim * 31 + i * 17;
+        const px = this.width * (0.5 + Math.sin(seed) * 0.45);
+        const py = this.height * (0.5 + Math.cos(seed * 1.3) * 0.45);
+        const pr = 40 + Math.abs(Math.sin(seed * 2.1)) * 100;
         
-        this.ctx.strokeStyle = 'rgba(100, 180, 255, 0.1)';
-        this.ctx.lineWidth = 1;
+        // Planet base gradient (3D sphere effect)
+        const pGrad = this.ctx.createRadialGradient(px - pr*0.3, py - pr*0.3, 0, px, py, pr);
+        const hue = Math.abs(Math.sin(seed)) * 360;
+        pGrad.addColorStop(0, `hsla(${hue}, 40%, 30%, 0.4)`);
+        pGrad.addColorStop(1, `hsla(${hue}, 40%, 5%, 0.1)`);
+        
         this.ctx.beginPath();
-        const cx = this.width / 2; const cy = this.height / 2;
-        for (let i = 0; i < 16; i++) {
-           const ang = (i / 16) * Math.PI * 2 + t * 0.08;
-           const rad = 200 + Math.sin(t + i)*100;
-           const endX = cx + Math.cos(ang) * this.width;
-           const endY = cy + Math.sin(ang) * this.height;
-           this.ctx.moveTo(cx, cy);
-           this.ctx.bezierCurveTo(cx + Math.cos(ang+1.5)*rad, cy + Math.sin(ang+1.5)*rad, endX, endY, endX, endY);
-        }
-        this.ctx.stroke();
-    } else {
-        // Astral - Deep multi-color pulsing mandala background
-        const grad = this.ctx.createRadialGradient(this.width/2, this.height/2, 0, this.width/2, this.height/2, this.width);
-        const hue = (t * 10) % 360;
-        grad.addColorStop(0, `hsla(${hue}, 30%, 15%, 1)`);
-        grad.addColorStop(1, '#05000a');
-        this.ctx.fillStyle = grad;
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.arc(px, py, pr, 0, Math.PI * 2);
+        this.ctx.fillStyle = pGrad;
+        this.ctx.fill();
         
-        const mandalaRings = 5;
-        for(let r=1; r<=mandalaRings; r++) {
+        // Atmosphere glow
+        this.ctx.lineWidth = pr * 0.05;
+        this.ctx.strokeStyle = `hsla(${hue}, 50%, 40%, 0.1)`;
+        this.ctx.stroke();
+
+        // Planet rings
+        if (i % 2 === 0) {
             this.ctx.save();
-            this.ctx.translate(this.coreX, this.coreY);
-            this.ctx.rotate(t * 0.1 * (r % 2 === 0 ? 1 : -1));
-            this.ctx.strokeStyle = `hsla(${hue + r * 30}, 70%, 50%, 0.15)`;
-            this.ctx.lineWidth = 1;
-            
+            this.ctx.translate(px, py);
+            this.ctx.rotate(Math.sin(seed) * Math.PI);
             this.ctx.beginPath();
-            const radius = r * 150 + Math.sin(t * 2 + r) * 20;
-            const points = 12;
-            for(let i=0; i<points; i++) {
-                const angle = (i / points) * Math.PI * 2;
-                if (i===0) this.ctx.moveTo(Math.cos(angle)*radius, Math.sin(angle)*radius);
-                else this.ctx.lineTo(Math.cos(angle)*radius, Math.sin(angle)*radius);
-            }
-            this.ctx.closePath();
+            this.ctx.ellipse(0, 0, pr * 1.8, pr * 0.4, 0, 0, Math.PI * 2);
+            this.ctx.strokeStyle = `hsla(${hue + 40}, 30%, 30%, 0.2)`;
+            this.ctx.lineWidth = pr * 0.1;
             this.ctx.stroke();
             this.ctx.restore();
         }
+    }
+    
+    // Void sleep visuals
+    if (this.inVoidSleep) {
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        const sleepGrad = this.ctx.createRadialGradient(this.width/2, this.height/2, 0, this.width/2, this.height/2, this.width);
+        sleepGrad.addColorStop(0, `rgba(100, 100, 255, ${0.05 + Math.sin(t) * 0.02})`);
+        sleepGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        this.ctx.fillStyle = sleepGrad;
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        this.ctx.fillStyle = `rgba(150, 150, 255, ${0.5 + Math.sin(t*2)*0.3})`;
+        this.ctx.font = '20px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText("Сон Пустоты...", this.width / 2, this.height / 2 + 100);
+    }
+    
+    // Ambient dust (ambient motes, not harsh dots)
+    this.ctx.fillStyle = 'rgba(200, 220, 255, 0.05)';
+    for(let i=0; i<80; i++) {
+        let sx = (i * 123 + t * 5) % this.width;
+        let sy = (i * 321 + t * 3) % this.height;
+        if (sx < 0) sx += this.width; if (sy < 0) sy += this.height;
+        this.ctx.beginPath();
+        this.ctx.arc(sx, sy, 1.5 + Math.sin(t+i)*1, 0, Math.PI*2);
+        this.ctx.fill();
     }
 
     if (this.flashTimer > 0) {
        this.ctx.fillStyle = `rgba(255, 255, 255, ${this.flashTimer * 0.5})`;
        this.ctx.fillRect(0, 0, this.width, this.height);
+    }
+    
+    if (this.activeAnomaly) {
+        this.ctx.fillStyle = 'rgba(255, 100, 100, 0.5)';
+        this.ctx.font = '12px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`АНОМАЛИЯ: ${this.activeAnomaly.type} [${Math.ceil(this.activeAnomaly.duration)}s]`, this.width / 2, 50);
     }
 
     // Draw Fractures (Level Up tears / Quasar beams) // OR mini explosions
@@ -1006,102 +1336,39 @@ export class GameEngine {
           this.ctx.stroke();
       }
 
-      if (currentDim === 0) {
-         this.ctx.beginPath();
-         this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-         if (p.isAntimatter) { this.ctx.fillStyle = '#ff0055'; this.ctx.shadowColor = '#ff0055'; this.ctx.shadowBlur = 20; }
-         else if (p.isVoidSpark) { this.ctx.fillStyle = '#00ffff'; this.ctx.shadowColor = '#00ffff'; this.ctx.shadowBlur = 30; }
-         else if (p.isComet) { this.ctx.fillStyle = '#ffaa00'; this.ctx.shadowColor = '#ffaa00'; this.ctx.shadowBlur = 20; }
-         else {
-             this.ctx.fillStyle = p.tier > 1 ? '#bbff00' : `hsl(${120 + p.tier*20}, 100%, 60%)`;
-             this.ctx.shadowBlur = p.tier > 1 ? Math.min(25, p.tier * 4) : 10;
-             this.ctx.shadowColor = this.ctx.fillStyle;
-         }
-         this.ctx.fill();
-         // inner core
-         this.ctx.beginPath();
-         this.ctx.arc(p.x, p.y, p.radius*0.5, 0, Math.PI * 2);
-         this.ctx.fillStyle = '#ffffff';
-         this.ctx.fill();
-      } else if (currentDim === 1) {
-         // Twilight - Squares and sharp edges, glowing borders
-         this.ctx.translate(p.x, p.y);
-         this.ctx.rotate(t * p.radius);
-         
-         const color = p.isAntimatter ? '#ff0033' : p.isVoidSpark ? '#ff00ff' : p.isComet ? '#ff6600' : p.tier > 1 ? '#cc00ff' : '#00ffcc';
-         this.ctx.shadowBlur = p.tier > 1 ? 20 : 10;
-         this.ctx.shadowColor = color;
-         this.ctx.strokeStyle = color;
-         this.ctx.lineWidth = 2.5;
-         this.ctx.beginPath();
-         this.ctx.rect(-p.radius, -p.radius, p.radius * 2, p.radius * 2);
-         this.ctx.stroke();
-         this.ctx.fillStyle = '#ffffff';
-         this.ctx.beginPath();
-         this.ctx.rect(-p.radius/3, -p.radius/3, p.radius * 0.6, p.radius * 0.6);
-         this.ctx.fill();
-      } else if (currentDim === 2) {
-         // Dawn - Hollow Diamonds / Rhombus with glowing borders
-         this.ctx.translate(p.x, p.y);
-         this.ctx.rotate(t * p.radius * 1.5 + Math.PI / 4); // 45 degree rotation for diamond
-         
-         const color = p.isAntimatter ? '#ff2a2a' : p.isVoidSpark ? '#ffff00' : p.isComet ? '#ffaa00' : p.tier > 1 ? '#ff00aa' : '#00ffaa';
-         this.ctx.shadowBlur = p.tier > 1 ? 20 : 10;
-         this.ctx.shadowColor = color;
-         this.ctx.strokeStyle = color;
-         this.ctx.lineWidth = 2;
-         
-         // Outer diamond
-         this.ctx.beginPath();
-         this.ctx.moveTo(0, -p.radius * 1.4);
-         this.ctx.lineTo(p.radius * 1.4, 0);
-         this.ctx.lineTo(0, p.radius * 1.4);
-         this.ctx.lineTo(-p.radius * 1.4, 0);
-         this.ctx.closePath();
-         this.ctx.stroke();
-         
-         // Inner diamond core
-         this.ctx.fillStyle = '#ffffff';
-         this.ctx.beginPath();
-         this.ctx.moveTo(0, -p.radius * 0.5);
-         this.ctx.lineTo(p.radius * 0.5, 0);
-         this.ctx.lineTo(0, p.radius * 0.5);
-         this.ctx.lineTo(-p.radius * 0.5, 0);
-         this.ctx.closePath();
-         this.ctx.fill();
-      } else if (currentDim === 3) {
-         // Ether - Rotating Triangles with inner glow
-         this.ctx.translate(p.x, p.y);
-         this.ctx.rotate(t * p.radius * 2 + p.vx * 0.1);
-         this.ctx.beginPath();
-         this.ctx.moveTo(0, -p.radius*2);
-         this.ctx.lineTo(p.radius*1.7, p.radius*1);
-         this.ctx.lineTo(-p.radius*1.7, p.radius*1);
-         this.ctx.closePath();
-         const color = p.isAntimatter ? '#ff0033' : p.isVoidSpark ? '#00ffff' : p.isComet ? '#ffcc00' : p.tier > 1 ? '#00ffaa' : '#0055ff';
-         this.ctx.fillStyle = color;
-         this.ctx.fill();
-         this.ctx.shadowBlur = p.tier > 1 ? 20 : 10;
-         this.ctx.shadowColor = color;
-         
-         this.ctx.fillStyle = '#ffffff';
-         this.ctx.beginPath();
-         this.ctx.arc(0, 0, p.radius*0.4, 0, Math.PI*2);
-         this.ctx.fill();
+      // Minimalist organic rings
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      
+      let strokeColor, fillColor;
+      if (p.isAntimatter) { 
+         strokeColor = '#e63946'; fillColor = 'rgba(230, 57, 70, 0.1)';
+      } else if (p.isVoidSpark) { 
+         strokeColor = '#a8dadc'; fillColor = 'rgba(168, 218, 220, 0.3)';
+      } else if (p.isComet) { 
+         strokeColor = '#e9c46a'; fillColor = 'rgba(233, 196, 106, 0.15)';
       } else {
-         // Astral - pulsating multi-rings and eyes
+         const tval = Math.min(1, p.tier / 5);
+         strokeColor = `hsla(${200 - tval*50}, 80%, 70%, ${(0.5 + tval*0.5)})`;
+         fillColor = `hsla(${200 - tval*50}, 80%, 70%, 0.15)`;
+      }
+
+      this.ctx.strokeStyle = strokeColor;
+      this.ctx.lineWidth = 1.5;
+      this.ctx.fillStyle = fillColor;
+
+      // Pulse
+      const pulse = Math.sin(t * 3 + p.x) * 1.5;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, Math.max(1, p.radius + pulse), 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+
+      // Inner membrane
+      if (p.tier > 1) {
          this.ctx.beginPath();
-         const pulse = Math.abs(Math.sin(t * 10 + p.x));
-         this.ctx.arc(p.x, p.y, p.radius + pulse * 2, 0, Math.PI * 2);
-         const color = p.isAntimatter ? '#ff0000' : p.isVoidSpark ? '#ffffff' : p.isComet ? '#ff8800' : p.tier > 1 ? '#00ff88' : '#aa00ff';
-         this.ctx.strokeStyle = color;
-         this.ctx.shadowColor = color;
-         this.ctx.shadowBlur = 20;
-         this.ctx.lineWidth = 2;
-         this.ctx.stroke();
-         this.ctx.beginPath();
-         this.ctx.arc(p.x, p.y, p.radius*0.6, 0, Math.PI * 2);
-         this.ctx.fillStyle = color;
+         this.ctx.arc(p.x, p.y, Math.max(1, p.radius * 0.4), 0, Math.PI * 2);
+         this.ctx.fillStyle = strokeColor;
          this.ctx.fill();
       }
 
